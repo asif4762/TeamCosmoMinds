@@ -1,0 +1,425 @@
+@import url("https://fonts.cdnfonts.com/css/general-sans");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Add this to the top of your existing index.css, after the imports */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure main takes full space */
+main {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Globe Css */
+.nasa-hud {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  animation: nasaFade 0.24s ease-out both;
+}
+.nasa-hud-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #e0312c;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(224, 49, 44, 0.35) inset,
+    0 4px 10px rgba(224, 49, 44, 0.35);
+}
+.nasa-hud-text {
+  color: #d7e8ff;
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.nasa-hover {
+  position: absolute;
+  left: 16px;
+  top: 48px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  line-height: 1.3;
+  animation: nasaFade 0.18s ease-out both;
+}
+.nasa-hover-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.nasa-hover-sub {
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.nasa-toast {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  animation: nasaSlideUp 0.22s ease-out both;
+}
+.nasa-toast-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.nasa-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: radial-gradient(
+      1200px 600px at 60% 30%,
+      rgba(11, 61, 145, 0.35),
+      rgba(0, 0, 0, 0.45)
+    ),
+    rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  animation: nasaFade 180ms ease-out both;
+  display: grid;
+  place-items: center;
+}
+.nasa-modal {
+  width: min(820px, 94vw);
+  max-height: 80vh;
+  overflow: hidden;
+  position: relative;
+  border-radius: 18px;
+  background: #0a1426;
+  color: #fff;
+  box-shadow: 0 16px 55px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  animation: nasaPop 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.nasa-border-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(125, 211, 252, 0),
+    rgba(125, 211, 252, 0.35),
+    rgba(224, 49, 44, 0.35),
+    rgba(255, 255, 255, 0.35),
+    rgba(125, 211, 252, 0.35),
+    rgba(125, 211, 252, 0)
+  );
+  filter: blur(14px) saturate(140%);
+  opacity: 0.65;
+  animation: nasaSpinSlow 10s linear infinite;
+}
+.nasa-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(
+      1200px 800px at -10% -20%,
+      rgba(11, 61, 145, 0.65),
+      rgba(10, 26, 47, 1) 50%,
+      rgba(6, 13, 26, 1) 70%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+}
+.nasa-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.06) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 26px 26px, 26px 26px;
+  mask-image: radial-gradient(
+    800px 520px at 20% 10%,
+    rgba(255, 255, 255, 1),
+    transparent 60%
+  );
+  opacity: 0.15;
+  animation: nasaDrift 24s linear infinite;
+}
+.nasa-stars {
+  position: absolute;
+  inset: -20% -10% -10% -10%;
+  background-repeat: repeat;
+  opacity: 0.25;
+}
+.nasa-stars-1 {
+  background-image: radial-gradient(
+      1px 1px at 20% 30%,
+      #ffffff 50%,
+      transparent 51%
+    ),
+    radial-gradient(1px 1px at 80% 70%, #ffffff 50%, transparent 51%),
+    radial-gradient(1px 1px at 50% 10%, #ffffff 50%, transparent 51%);
+  animation: nasaParallax 50s linear infinite;
+}
+.nasa-stars-2 {
+  background-image: radial-gradient(
+      1px 1px at 10% 60%,
+      #7dd3fc 50%,
+      transparent 51%
+    ),
+    radial-gradient(1px 1px at 70% 20%, #7dd3fc 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 80%, #7dd3fc 50%, transparent 51%);
+  opacity: 0.2;
+  animation: nasaParallax 90s linear infinite reverse;
+}
+.nasa-scanline {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.07) 1px,
+    transparent 2px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.05;
+  animation: nasaScan 8s linear infinite;
+}
+.nasa-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 10px 18px;
+}
+.nasa-badge {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.nasa-badge-core {
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background: #e0312c;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  font-size: 13px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.25),
+    0 6px 14px rgba(224, 49, 44, 0.35);
+}
+.nasa-badge-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(from 180deg, #7dd3fc, #ffffff, #e0312c, #7dd3fc);
+  filter: blur(1px);
+  animation: nasaSpinSlow 6s linear infinite;
+  opacity: 0.9;
+}
+.nasa-title {
+  display: grid;
+  line-height: 1;
+}
+.nasa-title-main {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+.nasa-title-sub {
+  opacity: 0.9;
+  font-size: 12px;
+  margin-top: 3px;
+}
+.nasa-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.nasa-close:hover {
+  transform: rotate(90deg) scale(1.05);
+  color: #7dd3fc;
+}
+
+.nasa-content {
+  position: relative;
+  z-index: 1;
+  padding: 10px 14px 14px 14px;
+  display: grid;
+  gap: 12px;
+  border-top: 2px solid rgba(255, 255, 255, 0.08);
+}
+.nasa-item {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  align-items: start;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0)
+  );
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transform-origin: 20% 50%;
+  animation: nasaItem 360ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.nasa-item-key {
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.nasa-item-val {
+  opacity: 0.96;
+}
+.nasa-item:hover {
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.35),
+    0 0 0 3px rgba(125, 211, 252, 0.08);
+  transform: translateY(-1px) scale(1.01);
+}
+
+.nasa-footer {
+  position: relative;
+  z-index: 1;
+  padding: 6px 14px 16px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+}
+.nasa-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e0312c;
+  box-shadow: 0 0 10px rgba(224, 49, 44, 0.6) inset,
+    0 0 10px rgba(224, 49, 44, 0.6);
+}
+.nasa-tip {
+  font-size: 12px;
+  opacity: 0.9;
+}
+.nasa-chip {
+  margin-left: auto;
+  background: linear-gradient(
+    180deg,
+    rgba(125, 211, 252, 0.25),
+    rgba(125, 211, 252, 0.05)
+  );
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  color: #dff5ff;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(125, 211, 252, 0.15);
+  animation: nasaFade 260ms 180ms ease-out both;
+}
+
+@keyframes nasaFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nasaPop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes nasaSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes nasaItem {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes nasaSpinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes nasaParallax {
+  to {
+    background-position: -1000px -400px;
+  }
+}
+@keyframes nasaScan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+@keyframes nasaDrift {
+  to {
+    transform: translate(20px, 12px);
+  }
+}
