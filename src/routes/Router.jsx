@@ -6,6 +6,7 @@ import Book from "../sections/Book";
 import About from "../sections/About/About";
 import Contact from "../sections/About/Contact";
 import AboutUs from "../sections/About/AboutUs";
+import Chatbot from "../sections/Chatbot";
 
 export const router = createBrowserRouter([
     {
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
         path: '/about',
         element: <AboutUs />
     },
+    {
+        path:'/chatbot',
+        element:<Chatbot/>
+    }
     // {
     //     path:'/contact',
     //     element:<Contact/>

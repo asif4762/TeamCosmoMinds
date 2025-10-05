@@ -9,16 +9,16 @@ export const navLinks = [
     name: "Terra Visualize",
     href: "/terra-game",
   },
-  {
+   {
     id: 3,
+    name: "ChatBot",
+    href: "/chatbot",
+  },
+  {
+    id: 4,
     name: "About Us",
     href: "/about",
-  },
-   {
-    id: 4,
-    name: "ChatBot",
-    href: "https://github.com/asif4762/cosmomind-chatboat",
-  },
+  }
   // {
   //   id: 4,
   //   name: "Contact Us",
