@@ -30,6 +30,12 @@ An immersive, interactive 3D globe experience built by **Team Cosmo Minds**, fea
 - **Smooth Animations** - Fluid transitions and micro-interactions
 - **Dark Cosmic Theme** - Carefully crafted color palette for space aesthetics
 
+### AI Model Demo
+
+![AI Model Demo](https://i.ibb.co/v4b5WQrP/Whats-App-Image-2025-10-05-at-10-58-44-AM.jpg)
+
+
+
 ## 🛠️ Tech Stack
 
 | Technology         | Purpose                 | Version |
