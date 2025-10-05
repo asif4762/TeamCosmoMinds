@@ -216,15 +216,9 @@ const Navbar = () => {
           </div>
           <NavItems onClick={closeMenu} activeId={activeId} />
           <div className="mt-6 flex items-center gap-3">
+
             <a
-              href="#contact"
-              onClick={closeMenu}
-              className="flex-1 text-center text-sm font-semibold text-black bg-gradient-to-r from-teal-300 to-blue-300 hover:from-teal-200 hover:to-blue-200 px-4 py-2 rounded-lg"
-            >
-              Contact
-            </a>
-            <a
-              href="https://github.com/"
+              href="https://github.com/asif4762/TeamCosmoMinds"
               target="_blank"
               rel="noreferrer"
               className="flex-1 text-center text-sm text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 rounded-lg"
@@ -232,7 +226,7 @@ const Navbar = () => {
               GitHub
             </a>
           </div>
-          <div className="mt-4 text-[11px] text-white/60">v1.0 • Terra Explorer</div>
+          <div className="mt-4 text-[11px] text-white/60">Terra Explorer</div>
         </div>
       </div>
     </header>

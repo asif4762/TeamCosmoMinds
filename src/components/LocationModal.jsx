@@ -541,9 +541,9 @@ export default function LocationModal({ location, isOpen, onClose }) {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-transform hover:scale-[1.02]">
+            {/* <button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-transform hover:scale-[1.02]">
               Connect
-            </button>
+            </button> */}
             <button
               onClick={onClose}
               className="px-6 py-3 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white transition-colors"
