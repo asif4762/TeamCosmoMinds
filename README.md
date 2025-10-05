@@ -57,8 +57,7 @@ An immersive, interactive 3D globe experience built by **Team Cosmo Minds**, fea
 
 ```bash
 # Clone the repository
-git clone https://github.com/iamafridi/Cosmo-Minds-Nasa-Space-App-Challenge.git
-cd Cosmo-Minds-Nasa-Space-App-Challenge
+git clone https://github.com/asif4762/TeamCosmoMinds.git
 
 # Install dependencies
 npm install
