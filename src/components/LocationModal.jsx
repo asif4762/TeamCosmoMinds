@@ -79,29 +79,31 @@ const DataModal = ({ isOpen, onClose, dataType, countryData }) => {
     >
       <div className="flex h-full">
         {/* Left Sidebar - Years */}
-        <div className="w-64 bg-slate-900 border-r border-slate-700 p-4 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold text-lg capitalize">{dataType}</h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
-              <X size={20} />
-            </button>
-          </div>
+<div className="hidden md:block w-64 bg-slate-900 border-r border-slate-700 p-4 overflow-y-auto">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-white font-bold text-lg capitalize">{dataType}</h3>
+    <button onClick={onClose} className="text-slate-400 hover:text-white">
+      <X size={20} />
+    </button>
+  </div>
 
-          <div className="space-y-2">
-            {years.map(year => (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`w-full text-left p-3 rounded-lg transition-colors ${selectedYear === year
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
-                  }`}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-        </div>
+  <div className="space-y-2">
+    {years.map(year => (
+      <button
+        key={year}
+        onClick={() => setSelectedYear(year)}
+        className={`w-full text-left p-3 rounded-lg transition-colors ${
+          selectedYear === year
+            ? 'bg-blue-600 text-white'
+            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+        }`}
+      >
+        {year}
+      </button>
+    ))}
+  </div>
+</div>
+
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">

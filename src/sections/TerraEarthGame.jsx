@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
-import { Play, Pause, RotateCcw, Info, Thermometer, Zap, Building2, Menu, BookOpen, Command, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Play, Pause, RotateCcw, Info, Thermometer, Zap, Building2, Command, Sparkles } from 'lucide-react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { Line } from 'react-chartjs-2';
@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './Navbar';
 import CommandPalette from '../components/CommandPalette';
 import Alert from '../components/Alert';
-
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 // Flipbook + CSS
 const TerraBook = lazy(() => import('../components/TerraBook'));
 import '../components/terra-book.css';
+
 
 // Lazy-load the book data per country (match marker names)
 const loadCountryBookData = {
@@ -29,39 +30,52 @@ const loadCountryBookData = {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-// Right-side book panel (unchanged)
-const RightBookPanel = ({ open, countryName, onClose, bookData }) => {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.aside
-          initial={{ x: '100%', opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: '100%', opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-          className="fixed top-0 right-0 h-screen w-[420px] max-w-[90vw] bg-transparent z-[99998] border-l border-white/10 flex flex-col"
-        >
-          <div className="flex items-center justify-between px-4 h-12">
-            <div className="flex items-center gap-2 text-white">
-            </div>
-            <button onClick={onClose} className="text-gray-300 hover:text-white text-xl leading-none">×</button>
-          </div>
+// Right-side / mobile bottom book panel
+const RightBookPanel = ({ open, countryName, onClose, bookData, isMobile }) => {
+  if (!open) return null;
 
-          <div className="flex-1 min-h-0">
-            <Suspense fallback={<div className="p-4 text-white text-sm">Loading book…</div>}>
-              {bookData ? (
-                <div className="w-full h-full grid place-items-center">
-                  <TerraBook title={bookData.title} subtitle={bookData.subtitle} data={{ countries: bookData.countries }} />
-                </div>
-              ) : (
-                <div className="p-4 text-white/80 text-sm">No storybook found for this country yet.</div>
-              )}
-            </Suspense>
+  const base = isMobile
+    ? 'fixed inset-x-0 bottom-0 h-[70vh] max-h-[100vh] w-full bg-black/80 backdrop-blur-md border-t border-white/10 rounded-t-2xl'
+    : 'fixed top-0 right-0 h-screen max-h-[100vh] w-[420px] max-w-[90vw] bg-black/70 backdrop-blur-md border-l border-white/10';
+
+  const panel = (
+    <AnimatePresence>
+      <motion.aside
+        initial={{ x: isMobile ? 0 : '100%', y: isMobile ? '100%' : 0, opacity: 0 }}
+        animate={{ x: 0, y: 0, opacity: 1 }}
+        exit={{ x: isMobile ? 0 : '100%', y: isMobile ? '100%' : 0, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+        className={`${base} z-[99998] flex flex-col pointer-events-auto`}
+        style={{ position: 'fixed' }}
+      >
+        <div className="flex items-center justify-between px-4 h-12">
+          <div className="flex items-center gap-2 text-white text-sm opacity-80">
+            {countryName || 'Story'}
           </div>
-        </motion.aside>
-      )}
+          <button onClick={onClose} className="text-gray-300 hover:text-white text-xl leading-none">×</button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <Suspense fallback={<div className="p-4 text-white text-sm">Loading book…</div>}>
+            {bookData ? (
+              <div className="w-full h-full grid place-items-center">
+                <TerraBook
+                  title={bookData.title}
+                  subtitle={bookData.subtitle}
+                  data={{ countries: bookData.countries }}
+                />
+              </div>
+            ) : (
+              <div className="p-4 text-white/80 text-sm">No storybook found for this country yet.</div>
+            )}
+          </Suspense>
+        </div>
+      </motion.aside>
     </AnimatePresence>
   );
+
+  // Render outside any clipped/transformed ancestors
+  return createPortal(panel, document.body);
 };
 
 const TerraEarthGame = () => {
@@ -83,14 +97,15 @@ const TerraEarthGame = () => {
   const [alert, setAlert] = useState({ open: false, type: 'info', text: '' });
 
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const isMobile = windowSize.width < 640;
 
   // Year data modal state
   const [showYearModal, setShowYearModal] = useState(false);
   const [selectedYearData, setSelectedYearData] = useState(null);
   const [yearModalPosition, setYearModalPosition] = useState({ x: 200, y: 100 });
 
-  const [panelPosition, setPanelPosition] = useState({ x: 24, y: window.innerHeight - 280 });
-  const [climatePanelPosition, setClimatePanelPosition] = useState({ x: 24, y: 24 });
+  const [panelPosition, setPanelPosition] = useState({ x: 16, y: window.innerHeight - 260 });
+  const [climatePanelPosition, setClimatePanelPosition] = useState({ x: 12, y: 12 });
 
   // New state for JSON data
   const [countriesData, setCountriesData] = useState(null);
@@ -101,7 +116,7 @@ const TerraEarthGame = () => {
   const draggingYearModalRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
 
-  const years = Array.from({ length: 25 }, (_, i) => 2000 + i);
+  const years = useMemo(() => Array.from({ length: 25 }, (_, i) => 2000 + i), []);
 
   // Fetch JSON data on component mount
   useEffect(() => {
@@ -120,54 +135,34 @@ const TerraEarthGame = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   // Helper function to get full data for a specific year and country
   const getFullYearData = (countryName, year) => {
     if (!countriesData || !countriesData[countryName]) return null;
-
     const countryData = countriesData[countryName];
     const result = {};
-
-    // Get climate data
     const climateKey = `climate_${year}`;
-    if (countryData.climate && countryData.climate[climateKey]) {
-      result.climate = countryData.climate[climateKey];
-    }
-
-    // Get deforestation data
+    if (countryData.climate && countryData.climate[climateKey]) result.climate = countryData.climate[climateKey];
     const deforestationKey = `deforestation_${year}`;
-    if (countryData.deforestation && countryData.deforestation[deforestationKey]) {
-      result.deforestation = countryData.deforestation[deforestationKey];
-    }
-
-    // Get urban data
+    if (countryData.deforestation && countryData.deforestation[deforestationKey]) result.deforestation = countryData.deforestation[deforestationKey];
     const urbanKey = `urban_${year}`;
-    if (countryData.urban && countryData.urban[urbanKey]) {
-      result.urban = countryData.urban[urbanKey];
-    }
-
+    if (countryData.urban && countryData.urban[urbanKey]) result.urban = countryData.urban[urbanKey];
     return result;
   };
 
   // Helper function to extract data for a specific year and country
   const getCountryDataForYear = (countryName, year, dataType) => {
     if (!countriesData || !countriesData[countryName]) return null;
-
     const countryData = countriesData[countryName];
-
     switch (dataType) {
       case 'climate':
-        const climateKey = `climate_${year}`;
-        return countryData.climate?.[climateKey] || null;
+        return countryData.climate?.[`climate_${year}`] || null;
       case 'deforestation':
-        const deforestationKey = `deforestation_${year}`;
-        return countryData.deforestation?.[deforestationKey] || null;
+        return countryData.deforestation?.[`deforestation_${year}`] || null;
       case 'urban':
-        const urbanKey = `urban_${year}`;
-        return countryData.urban?.[urbanKey] || null;
+        return countryData.urban?.[`urban_${year}`] || null;
       default:
         return null;
     }
@@ -179,35 +174,12 @@ const TerraEarthGame = () => {
       setAlert({ open: true, type: 'warning', text: `No data available for ${countryName} in ${year}` });
       return;
     }
-
-    const countryData = countriesData[countryName];
-    const result = {};
-
-    // Get climate data
-    const climateKey = `climate_${year}`;
-    if (countryData.climate && countryData.climate[climateKey]) {
-      result.climate = countryData.climate[climateKey];
-    }
-
-    // Get deforestation data
-    const deforestationKey = `deforestation_${year}`;
-    if (countryData.deforestation && countryData.deforestation[deforestationKey]) {
-      result.deforestation = countryData.deforestation[deforestationKey];
-    }
-
-    // Get urban data
-    const urbanKey = `urban_${year}`;
-    if (countryData.urban && countryData.urban[urbanKey]) {
-      result.urban = countryData.urban[urbanKey];
-    }
-
-    if (Object.keys(result).length > 0) {
-      setSelectedYearData({
-        country: countryName,
-        year: year,
-        data: result
-      });
+    const result = getFullYearData(countryName, year);
+    if (result && Object.keys(result).length) {
+      setSelectedYearData({ country: countryName, year, data: result });
       setShowYearModal(true);
+      // On mobile, pin modal to center
+      if (isMobile) setYearModalPosition({ x: 12, y: 64 });
     } else {
       setAlert({ open: true, type: 'warning', text: `No data available for ${countryName} in ${year}` });
     }
@@ -243,7 +215,6 @@ const TerraEarthGame = () => {
       const coords = coordinates[countryName];
       if (!coords) return;
 
-      // Create arrays for time series data
       const temperatureData = [];
       const co2Data = [];
       const forestCoverData = [];
@@ -252,16 +223,13 @@ const TerraEarthGame = () => {
       const droughtsData = [];
 
       years.forEach(year => {
-        // Climate data extraction
         const climateText = getCountryDataForYear(countryName, year, 'climate');
         if (climateText) {
-          // Extract temperature (looking for patterns like "27.3°C" or "temperature of 15.2°C")
           const temp = extractNumberFromText(climateText, /(\d+\.?\d*)\s*°?C/i) ||
             extractNumberFromText(climateText, /temperature.*?(\d+\.?\d*)/i) ||
             20 + Math.random() * 10; // fallback
           temperatureData.push(temp);
 
-          // Extract CO2 (looking for patterns like "3.50 tons per capita" or "emissions at 1.20")
           const co2 = extractNumberFromText(climateText, /(\d+\.?\d*)\s*tons per capita/i) ||
             extractNumberFromText(climateText, /emissions.*?(\d+\.?\d*)/i) ||
             200 + Math.random() * 100; // fallback
@@ -271,7 +239,6 @@ const TerraEarthGame = () => {
           co2Data.push(200 + Math.random() * 100);
         }
 
-        // Deforestation data
         const deforestationText = getCountryDataForYear(countryName, year, 'deforestation');
         if (deforestationText) {
           const forestCover = extractNumberFromText(deforestationText, /(\d+\.?\d*)%.*forest/i) ||
@@ -282,7 +249,6 @@ const TerraEarthGame = () => {
           forestCoverData.push(30 + Math.random() * 20);
         }
 
-        // Urban data
         const urbanText = getCountryDataForYear(countryName, year, 'urban');
         if (urbanText) {
           const urbanization = extractNumberFromText(urbanText, /urbanization.*?(\d+\.?\d*)%/i) ||
@@ -293,12 +259,11 @@ const TerraEarthGame = () => {
           urbanizationData.push(50 + Math.random() * 30);
         }
 
-        // Mock disaster data (floods and droughts) - since not explicitly in JSON structure
+        // Mock disaster data
         floodsData.push(Math.floor(Math.random() * 5));
         droughtsData.push(Math.floor(Math.random() * 3));
       });
 
-      // Map country names to display names for compatibility
       let displayName = countryName;
       if (countryName === 'USA') displayName = 'United States';
 
@@ -329,30 +294,33 @@ const TerraEarthGame = () => {
     })), [countryData]
   );
 
-  // Clean label sprite, no custom RAF (prevents leaks)
+  // Label sprite with DPR-aware canvas for crisp text on mobile
   const createMarker = (d) => {
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const w = 256, h = 64;
     const canvas = document.createElement('canvas');
-    canvas.width = 256; canvas.height = 64;
+    canvas.width = w * DPR; canvas.height = h * DPR;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 256, 64);
+    ctx.scale(DPR, DPR);
+    ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = 'rgba(0,0,0,.35)';
-    ctx.fillRect(0, 0, 256, 64);
-    ctx.font = '48px sans-serif';
+    ctx.fillRect(0, 0, w, h);
+    ctx.font = '500 20px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffd54a';
-    ctx.fillText(`🔍 ${d.name}`, 128, 36);
+    ctx.fillText(`🔍 ${d.name}`, w / 2, h / 2);
     const texture = new THREE.CanvasTexture(canvas);
 
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }));
-    sprite.scale.set(14, 4, 1);
-    sprite.userData = { name: d.name }; // avoid deep circular refs
+    sprite.scale.set(12, 3.2, 1);
+    sprite.userData = { name: d.name };
     sprite.raycast = THREE.Sprite.prototype.raycast;
 
-    // subtle ring (static, no RAF)
-    const ringGeo = new THREE.RingGeometry(0.35, 0.5, 48);
+    const ringGeo = new THREE.RingGeometry(0.32, 0.46, 48);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(0, -1.5, 0);
+    ring.position.set(0, -1.2, 0);
     sprite.add(ring);
 
     return sprite;
@@ -366,19 +334,21 @@ const TerraEarthGame = () => {
     controls.autoRotateSpeed = 0.45;
   }, [isPlaying]);
 
+  // rAF-throttled resize handler for smoother mobile behavior
   useEffect(() => {
-    const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    let raf = 0;
+    const onResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setWindowSize({ width: window.innerWidth, height: window.innerHeight }));
+    };
+    window.addEventListener('resize', onResize);
+    return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(raf); };
   }, []);
 
   // Keyboard: Cmd/Ctrl+K opens palette, Esc closes
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(v => !v);
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(v => !v); }
       if (e.key === 'Escape') setPaletteOpen(false);
     };
     window.addEventListener('keydown', onKey);
@@ -416,7 +386,7 @@ const TerraEarthGame = () => {
     const d = markerData.find(m => m.name === name);
     if (!d) return;
     setSelectedCountry(d);
-    globeEl.current?.pointOfView({ lat: d.lat, lng: d.lng, altitude: 2.2 }, 1000);
+    globeEl.current?.pointOfView({ lat: d.lat, lng: d.lng, altitude: isMobile ? 2.6 : 2.2 }, 1000);
   };
 
   const jumpToCountry = (name) => {
@@ -427,16 +397,17 @@ const TerraEarthGame = () => {
 
   const handleMarkerClick = (d) => {
     setSelectedCountry(d);
-    globeEl.current.pointOfView({ lat: d.lat, lng: d.lng, altitude: 2.2 }, 1000);
+    globeEl.current.pointOfView({ lat: d.lat, lng: d.lng, altitude: isMobile ? 2.6 : 2.2 }, 1000);
     openBookForCountry(d.name);
     setShowControlPanel(true);
   };
 
   // drag panels
-  const startDrag = (clientX, clientY, type = "control") => {
-    if (type === "control") draggingRef.current = true;
-    if (type === "climate") draggingClimateRef.current = true;
-    if (type === "yearModal") draggingYearModalRef.current = true;
+  const startDrag = (clientX, clientY, type = 'control') => {
+    if (isMobile) return; // lock dragging on mobile to avoid scroll conflicts
+    if (type === 'control') draggingRef.current = true;
+    if (type === 'climate') draggingClimateRef.current = true;
+    if (type === 'yearModal') draggingYearModalRef.current = true;
     lastPosRef.current = { x: clientX, y: clientY };
     document.body.style.userSelect = 'none';
     document.body.style.touchAction = 'none';
@@ -449,6 +420,7 @@ const TerraEarthGame = () => {
     document.body.style.touchAction = '';
   };
   const onWindowPointerMove = (e) => {
+    if (isMobile) return; // no free-drag on mobile
     let clientX, clientY;
     if (e.type.startsWith('touch')) {
       if (!e.touches?.length) return;
@@ -490,7 +462,7 @@ const TerraEarthGame = () => {
       window.removeEventListener('touchend', stopDrag);
       window.removeEventListener('touchcancel', stopDrag);
     };
-  }, [windowSize]);
+  }, [windowSize, isMobile]);
 
   // left analytics panel
   const renderDataPanel = () => {
@@ -534,66 +506,63 @@ const TerraEarthGame = () => {
         fill: false,
         borderColor: ['#F87171', '#8B5CF6', '#10B981'][idx % 3],
         tension: 0.3,
+        pointHitRadius: 10,
       })),
     };
     const chartOptions = {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: 'white' } },
-        title: { display: true, text: currentPanel.title + ' Trends', color: 'white', font: { size: 14 } },
+        legend: { labels: { color: 'white', boxWidth: 8, font: { size: isMobile ? 10 : 12 } } },
+        title: { display: true, text: currentPanel.title + ' Trends', color: 'white', font: { size: isMobile ? 12 : 14 } },
+        tooltip: { bodyFont: { size: isMobile ? 10 : 12 }, titleFont: { size: isMobile ? 10 : 12 } },
       },
       scales: {
-        x: {
-          ticks: { color: 'white' },
-          // Make year labels clickable by handling chart click events
-        },
-        y: { ticks: { color: 'white' } }
+        x: { ticks: { color: 'white', maxRotation: 0, autoSkip: true, autoSkipPadding: 10, font: { size: isMobile ? 9 : 11 } } },
+        y: { ticks: { color: 'white', font: { size: isMobile ? 9 : 11 } } }
       },
-      // ---------- FIX: open year modal when clicking chart points ----------
       onClick: (event, elements) => {
         if (elements.length > 0) {
           const clickedIndex = elements[0].index;
           setYearIndex(clickedIndex);
-          // open modal for this country and year
           openYearDataModal(name, years[clickedIndex]);
         }
       },
       onHover: (event, elements) => {
-        try {
-          // event.native may be undefined in some contexts — guard it
-          if (event?.native?.target) event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-        } catch (e) { /* ignore */ }
+        try { if (event?.native?.target) event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default'; } catch (e) {}
       },
     };
 
-    const isMobile = windowSize.width < 900;
-
     return (
       <motion.div
-        initial={{ x: '-100%', opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '-100%', opacity: 0 }}
+        initial={{ x: isMobile ? 0 : '-100%', y: isMobile ? '100%' : 0, opacity: 0 }}
+        animate={{ x: 0, y: 0, opacity: 1 }}
+        exit={{ x: isMobile ? 0 : '-100%', y: isMobile ? '100%' : 0, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        style={{ left: `${climatePanelPosition.x}px`, top: `${climatePanelPosition.y}px`, position: 'absolute' }}
-        className={`${isMobile ? 'w-[90vw]' : 'w-[360px]'} rounded-xl bg-blue-950/85 p-4 backdrop-blur-sm z-[99997]`}
+        style={isMobile ? { left: 0, right: 0, bottom: 0, position: 'absolute' } : { left: `${climatePanelPosition.x}px`, top: `${climatePanelPosition.y}px`, position: 'absolute' }}
+        className={`${isMobile
+  ? 'inset-x-0 bottom-0 w-full max-h-[100vh] h-auto overflow-y-auto rounded-t-2xl bg-blue-950/95 pb-safe p-4'
+  : 'w-[360px] rounded-xl bg-blue-950/85 p-4'}
+  backdrop-blur-sm z-[99997]`}
+
         ref={climatePanelRef}
       >
-        <div
-          className="w-full mb-2 pt-3 pb-2 flex justify-center cursor-grab active:cursor-grabbing"
-          onMouseDown={(e) => startDrag(e.clientX, e.clientY, "climate")}
-          onTouchStart={(e) => { if (e.touches?.length) { const t = e.touches[0]; startDrag(t.clientX, t.clientY, "climate"); } }}
-        >
-          <div className="w-16 h-2 bg-gray-500 rounded-full" />
-        </div>
+        {/* Drag handle (hidden on mobile) */}
+        {!isMobile && (
+          <div
+            className="w-full mb-2 pt-3 pb-2 flex justify-center cursor-grab active:cursor-grabbing"
+            onMouseDown={(e) => startDrag(e.clientX, e.clientY, 'climate')}
+            onTouchStart={(e) => { if (e.touches?.length) { const t = e.touches[0]; startDrag(t.clientX, t.clientY, 'climate'); } }}
+          >
+            <div className="w-16 h-2 bg-gray-500 rounded-full" />
+          </div>
+        )}
 
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-white font-bold text-lg">
+          <h3 className="text-white font-bold text-base sm:text-lg">
             {emoji} {name} —{' '}
             <button
-              onClick={() => {
-                // open modal when clicking the year in the header
-                openYearDataModal(name, years[yearIndex]);
-              }}
+              onClick={() => openYearDataModal(name, years[yearIndex])}
               className="inline-block text-white font-bold hover:underline"
               title={`View ${name} data for ${years[yearIndex]}`}
             >
@@ -603,35 +572,32 @@ const TerraEarthGame = () => {
           <button onClick={() => setSelectedCountry(null)} className="text-gray-400 hover:text-white text-xl">×</button>
         </div>
 
-        <div className="flex mb-4 flex-wrap gap-1 bg-gray-800 rounded-lg p-1">
+        <div className="flex mb-3 flex-wrap gap-1 bg-gray-800 rounded-lg p-1">
           {Object.entries(panels).map(([key, panel]) => (
             <button
               key={key}
               onClick={() => setActivePanel(key)}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${activePanel === key ? `bg-gradient-to-r ${panel.color} text-white` : 'text-gray-400 hover:text-white'
-                }`}
+              className={`flex-1 min-w-[90px] flex items-center justify-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${activePanel === key ? `bg-gradient-to-r ${panel.color} text-white` : 'text-gray-300 bg-gray-700/60 hover:bg-gray-700'}`}
             >
               {panel.icon}<span className="hidden sm:inline">{panel.title}</span>
+              <span className="sm:hidden">{panel.title.slice(0, 4)}</span>
             </button>
           ))}
         </div>
 
-        <div className="h-44 mb-4">
+        <div className={`${isMobile ? 'h-32' : 'h-44'} mb-3`}>
           <Line data={chartData} options={chartOptions} />
-          <div className="text-xs text-white/70 mt-1 text-center">Click on chart points to jump to that year</div>
+          <div className="text-[10px] sm:text-xs text-white/70 mt-1 text-center">Tap points to open that year</div>
         </div>
 
         {currentPanel.data.map((item, idx) => (
           <div key={idx} className="bg-orange-500/80 rounded p-2 mt-2">
-            <div className="text-sm font-medium">{item.label}</div>
-            <div className="text-lg font-bold">{Number(item.value).toFixed(2)}</div>
+            <div className="text-xs sm:text-sm font-medium">{item.label}</div>
+            <div className="text-base sm:text-lg font-bold">{Number(item.value).toFixed(2)}</div>
             <div className="w-full bg-black/30 rounded-full h-2 mt-1">
               <div
                 className="bg-white rounded-full h-2 transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, Math.abs(item.trend[yearIndex]) / Math.max(...item.trend.map(v => Math.abs(v))) * 100)
-                    }%`,
-                }}
+                style={{ width: `${Math.min(100, Math.abs(item.trend[yearIndex]) / Math.max(...item.trend.map(v => Math.abs(v))) * 100)}%` }}
               />
             </div>
           </div>
@@ -645,54 +611,33 @@ const TerraEarthGame = () => {
     if (!showYearModal || !selectedYearData) return null;
 
     const { country, year, data } = selectedYearData;
-    const isMobile = windowSize.width < 640;
 
     return (
       <AnimatePresence>
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: isMobile ? 1 : 0.9, y: isMobile ? '100%' : 0 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: isMobile ? 1 : 0.9, y: isMobile ? '100%' : 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          style={{
-            left: `${yearModalPosition.x}px`,
-            top: `${yearModalPosition.y}px`,
-            position: 'absolute'
-          }}
-          className={`${isMobile ? 'w-[95vw] max-h-[80vh]' : 'w-[500px] max-h-[600px]'} 
-                     rounded-xl bg-gray-900/95 backdrop-blur-md border border-white/20 
-                     overflow-hidden z-[99999] shadow-2xl`}
+          style={isMobile ? { left: 0, right: 0, bottom: 0, position: 'absolute' } : { left: `${yearModalPosition.x}px`, top: `${yearModalPosition.y}px`, position: 'absolute' }}
+          className={`${isMobile ? 'w-full max-h-[70vh]' : 'w-[500px] max-h-[600px]'} rounded-t-2xl sm:rounded-xl bg-gray-900/95 backdrop-blur-md border border-white/10 overflow-hidden z-[99999] shadow-2xl`}
         >
-          {/* Header with drag handle */}
+          {/* Header */}
           <div
-            className="w-full bg-gradient-to-r from-blue-900 to-purple-300 p-4 cursor-grab active:cursor-grabbing"
-            onMouseDown={(e) => startDrag(e.clientX, e.clientY, "yearModal")}
-            onTouchStart={(e) => {
-              if (e.touches?.length) {
-                const t = e.touches[0];
-                startDrag(t.clientX, t.clientY, "yearModal");
-              }
-            }}
+            className={`w-full bg-gradient-to-r from-blue-900 to-purple-300 p-4 ${isMobile ? '' : 'cursor-grab active:cursor-grabbing'}`}
+            onMouseDown={(e) => !isMobile && startDrag(e.clientX, e.clientY, 'yearModal')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-1 bg-white/60 rounded-full" />
-                <h3 className="text-white font-bold text-lg">
-                  {country} - {year}
-                </h3>
+                <h3 className="text-white font-bold text-lg">{country} - {year}</h3>
               </div>
-              <button
-                onClick={() => setShowYearModal(false)}
-                className="text-white/80 hover:text-white text-2xl font-bold transition-colors"
-              >
-                ×
-              </button>
+              <button onClick={() => setShowYearModal(false)} className="text-white/80 hover:text-white text-2xl font-bold transition-colors">×</button>
             </div>
           </div>
 
           {/* Content */}
-          <div className="p-4 overflow-y-auto max-h-[500px]">
-            {/* Climate Section */}
+          <div className="p-4 overflow-y-auto max-h-[60vh] sm:max-h-[500px]">
             {data.climate && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -700,14 +645,11 @@ const TerraEarthGame = () => {
                   <h4 className="text-white font-semibold text-lg">Climate Overview</h4>
                 </div>
                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">
-                    {data.climate}
-                  </p>
+                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{data.climate}</p>
                 </div>
               </div>
             )}
 
-            {/* Deforestation Section */}
             {data.deforestation && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -715,14 +657,11 @@ const TerraEarthGame = () => {
                   <h4 className="text-white font-semibold text-lg">Deforestation & Forest Cover</h4>
                 </div>
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">
-                    {data.deforestation}
-                  </p>
+                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{data.deforestation}</p>
                 </div>
               </div>
             )}
 
-            {/* Urban Section */}
             {data.urban && (
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -730,14 +669,11 @@ const TerraEarthGame = () => {
                   <h4 className="text-white font-semibold text-lg">Urban Development</h4>
                 </div>
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">
-                    {data.urban}
-                  </p>
+                  <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{data.urban}</p>
                 </div>
               </div>
             )}
 
-            {/* No data message */}
             {!data.climate && !data.deforestation && !data.urban && (
               <div className="text-center py-8">
                 <div className="text-gray-400 text-lg mb-2">📊</div>
@@ -750,7 +686,7 @@ const TerraEarthGame = () => {
           <div className="px-4 py-3 bg-gray-800/50 border-t border-white/10">
             <div className="flex items-center justify-between text-xs text-gray-400">
               <span>Source: Terra Earth Data Archive</span>
-              <span>Drag to move • Click × to close</span>
+              <span>{isMobile ? 'Swipe down to close' : 'Drag to move • Click × to close'}</span>
             </div>
           </div>
         </motion.div>
@@ -758,7 +694,6 @@ const TerraEarthGame = () => {
     );
   };
 
-  // Show loading state while data is being fetched
   if (loading) {
     return (
       <div className="relative w-full h-screen bg-gray-900 overflow-hidden flex items-center justify-center">
@@ -770,7 +705,7 @@ const TerraEarthGame = () => {
   const quickActions = [
     {
       title: 'Reset view', desc: 'Zoom out & stop panels', icon: <RotateCcw className="w-4 h-4" />, onRun: () => {
-        setYearIndex(0); setSelectedCountry(null); setShowBookPanel(false); globeEl.current?.pointOfView({ altitude: 2.6 }, 900);
+        setYearIndex(0); setSelectedCountry(null); setShowBookPanel(false); globeEl.current?.pointOfView({ altitude: 2.8 }, 900);
       }
     },
     { title: isPlaying ? 'Pause auto-rotate' : 'Play auto-rotate', desc: 'Toggle globe rotation', icon: <Play className="w-4 h-4" />, onRun: () => setIsPlaying(v => !v) },
@@ -802,21 +737,22 @@ const TerraEarthGame = () => {
         enablePointerInteraction
       />
 
-      {/* LEFT: Data Panel */}
+      {/* LEFT / BOTTOM: Data Panel */}
       <AnimatePresence>{renderDataPanel()}</AnimatePresence>
 
       {/* Year Data Modal */}
       <YearDataModal />
 
-      {/* RIGHT: Book Panel */}
+      {/* RIGHT or BOTTOM: Book Panel */}
       <RightBookPanel
         open={showBookPanel}
         countryName={selectedCountry?.name}
         onClose={() => setShowBookPanel(false)}
         bookData={bookData}
+        isMobile={isMobile}
       />
 
-      {/* Control Bar (bottom-left) */}
+      {/* Control Bar */}
       <AnimatePresence>
         {showControlPanel && (
           <motion.div
@@ -825,59 +761,52 @@ const TerraEarthGame = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            style={{ left: panelPosition.x, top: panelPosition.y, position: 'absolute', width: 540 }}
-            className="pointer-events-auto bg-black/90 backdrop-blur-md p-4 flex flex-col gap-3 w-[340px] rounded-xl z-[99996]"
+            style={isMobile ? { left: 0, right: 0, bottom: 0, position: 'absolute' } : { left: panelPosition.x, top: panelPosition.y, position: 'absolute', width: 540 }}
+            className={`pointer-events-auto ${isMobile ? 'bg-black/75 p-3 w-full rounded-t-2xl' : 'bg-black/90 p-4 w-[340px] rounded-xl'} backdrop-blur-md z-[99996]`}
           >
-            <div
-              className="w-full flex items-center justify-between cursor-grab mb-3"
-              onMouseDown={(e) => startDrag(e.clientX, e.clientY, "control")}
-              onTouchStart={(e) => { if (e.touches?.length) { const t = e.touches[0]; startDrag(t.clientX, t.clientY, "control"); } }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-2 bg-gray-600 rounded-full" />
-                <div className="w-8 h-2 bg-gray-600 rounded-full" />
+            {/* Drag zone (desktop only) */}
+            {!isMobile && (
+              <div
+                className="w-full flex items-center justify-between cursor-grab mb-3"
+                onMouseDown={(e) => startDrag(e.clientX, e.clientY, 'control')}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-2 bg-gray-600 rounded-full" />
+                  <div className="w-8 h-2 bg-gray-600 rounded-full" />
+                </div>
+                <button onClick={() => setShowControlPanel(false)} className="text-gray-400 hover:text-white font-bold text-xl">×</button>
               </div>
-              <button onClick={() => setShowControlPanel(false)} className="text-gray-400 hover:text-white font-bold text-xl">×</button>
-            </div>
+            )}
 
             <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setIsPlaying(v => !v)}
-                  className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-white font-medium text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-white font-medium text-sm active:scale-[.98]"
                 >
                   {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  {isPlaying ? 'Pause' : 'Play'}
+                  {isMobile ? '' : (isPlaying ? 'Pause' : 'Play')}
                 </button>
                 <button
-                  onClick={() => {
-                    setYearIndex(0);
-                    setSelectedCountry(null);
-                    setShowBookPanel(false);
-                    globeEl.current?.pointOfView({ altitude: 2.5 }, 1000);
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white font-medium text-sm"
+                  onClick={() => { setYearIndex(0); setSelectedCountry(null); setShowBookPanel(false); globeEl.current?.pointOfView({ altitude: 2.6 }, 1000); }}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white font-medium text-sm active:scale-[.98]"
                 >
-                  <RotateCcw className="w-4 h-4" /> Reset
-                </button>
-                <button
-                  onClick={() => setShowInfo(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white font-medium text-sm"
-                >
-                  <Info className="w-4 h-4" /> Info
+                  <RotateCcw className="w-4 h-4" />
+                  {!isMobile && 'Reset'}
                 </button>
               </div>
               <button
                 onClick={() => setPaletteOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white bg-white/10 hover:bg-white/20"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white bg-white/10 hover:bg-white/20 active:scale-[.98]"
                 title="Open command palette (⌘K / Ctrl+K)"
               >
-                <Command className="w-4 h-4" /> Palette
+                <Command className="w-4 h-4" />
+                {!isMobile && 'Palette'}
               </button>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-white text-sm font-medium">Year:</span>
+              <span className="text-white text-sm font-medium hidden sm:inline">Year:</span>
               <input
                 type="range"
                 min="0"
@@ -886,52 +815,26 @@ const TerraEarthGame = () => {
                 onChange={(e) => setYearIndex(+e.target.value)}
                 className="flex-1 accent-teal-500"
               />
-              {/* ---------- Command Pallet ---------- */}
               <button
-                onClick={() => {
-                  if (selectedCountry) openYearDataModal(selectedCountry.name, years[yearIndex]);
-                }}
-                className="text-white text-lg font-bold min-w-[4rem] cursor-pointer"
+                onClick={() => { if (selectedCountry) openYearDataModal(selectedCountry.name, years[yearIndex]); }}
+                className="text-white text-lg font-bold min-w-[4rem]"
                 title={selectedCountry ? `View ${selectedCountry.name} data for ${years[yearIndex]}` : `Set year to ${years[yearIndex]}`}
               >
                 {years[yearIndex]}
               </button>
-
-              <button
-                onClick={() => setYearIndex(prev => Math.max(0, prev - 1))}
-                disabled={yearIndex === 0}
-                className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-bold text-lg flex items-center justify-center"
-              >
-                −
-              </button>
-
-              <button
-                onClick={() => setYearIndex(prev => Math.min(years.length - 1, prev + 1))}
-                disabled={yearIndex === years.length - 1}
-                className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-bold text-lg flex items-center justify-center"
-              >
-                +
-              </button>
+              <button onClick={() => setYearIndex(prev => Math.max(0, prev - 1))} disabled={yearIndex === 0} className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-bold text-lg flex items-center justify-center">−</button>
+              <button onClick={() => setYearIndex(prev => Math.min(years.length - 1, prev + 1))} disabled={yearIndex === years.length - 1} className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-bold text-lg flex items-center justify-center">+</button>
             </div>
 
-            {/* Year selector with clickable buttons */}
-            <div className="mt-2 flex">
-              <div className="text-white text-xs mb-2">Quick year selection (click to view detailed data):</div>
-              <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+            {/* Quick year selection */}
+            <div className="mt-2">
+              <div className="text-white text-[11px] mb-1">Quick year selection (tap to view data)</div>
+              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
                 {years.map((year, index) => (
                   <button
                     key={year}
-                    onClick={() => {
-                      setYearIndex(index);
-                      // Open year modal if a country is selected
-                      if (selectedCountry) {
-                        openYearDataModal(selectedCountry.name, year);
-                      }
-                    }}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-all ${yearIndex === index
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                      }`}
+                    onClick={() => { setYearIndex(index); if (selectedCountry) openYearDataModal(selectedCountry.name, year); }}
+                    className={`px-2 py-1 rounded text-[10px] sm:text-xs font-medium transition-all ${yearIndex === index ? 'bg-teal-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'}`}
                     title={selectedCountry ? `View ${selectedCountry.name} data for ${year}` : `Set year to ${year}`}
                   >
                     {year}
@@ -952,24 +855,25 @@ const TerraEarthGame = () => {
         quickActions={quickActions}
       />
 
-      {/* Tiny hint chip for palette */}
-      <div className="hidden sm:flex items-center gap-1 text-[11px] text-white/80 bg-white/10 px-2 py-1 rounded-md absolute top-4 left-4 z-[99994]">
-        <Command className="w-3.5 h-3.5" /> K
-        <span className="opacity-80">Open palette</span>
-      </div>
+      {/* Hint chip (hide on mobile) */}
+      {!isMobile && (
+        <div className="hidden sm:flex items-center gap-1 text-[11px] text-white/80 bg-white/10 px-2 py-1 rounded-md absolute top-4 left-4 z-[99994]">
+          <Command className="w-3.5 h-3.5" /> K
+          <span className="opacity-80">Open palette</span>
+        </div>
+      )}
 
       {/* Intro Info */}
       {showInfo && (
-        <div className={`absolute z-[99995] bg-black/80 backdrop-blur-sm rounded-lg p-4
-            ${windowSize.width < 640 ? 'top-0 left-0 w-full rounded-t-lg max-h-[60vh] overflow-y-auto' : 'top-4 right-4 max-w-sm'}`}>
+        <div className={`absolute z-[99995] bg-black/80 backdrop-blur-sm rounded-lg p-4 ${isMobile ? 'inset-x-0 bottom-0 w-full rounded-t-lg max-h-[60vh] overflow-y-auto' : 'top-4 right-4 max-w-sm'}`}>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-white font-bold text-lg">Terra Earth Explorer</h2>
             <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-white">×</button>
           </div>
           <p className="text-gray-300 text-sm mb-3">
-            <strong>Drag to rotate</strong> the Earth.<br />
-            Click a marker to open the country's storybook (right) and see 25 years of data (left).<br />
-            <strong>Click on chart points or year buttons</strong> to jump to specific years.<br />
+            <strong>{isMobile ? 'Swipe & pinch' : 'Drag'}</strong> to rotate the Earth.<br />
+            Tap a marker to open the country's storybook and see 25 years of data.<br />
+            Tap chart points or year buttons to jump to specific years.<br />
             Tip: press <kbd className="px-1.5 py-0.5 bg-white/10 rounded">⌘K</kbd> / <kbd className="px-1.5 py-0.5 bg-white/10 rounded">Ctrl+K</kbd> to jump anywhere.
           </p>
           <div className="text-xs text-gray-400">Team CosmoMinds • Terra Data Visualization</div>
@@ -990,6 +894,3 @@ const TerraEarthGame = () => {
 };
 
 export default TerraEarthGame;
-
-
-

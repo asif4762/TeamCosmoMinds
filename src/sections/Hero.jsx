@@ -8,7 +8,7 @@ import Navbar from './Navbar';
 import { generateStarsData, locations } from '../constants/locationsData';
 
 const Hero = () => {
-  // State Management
+  // State
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [starsData, setStarsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,13 +17,14 @@ const Hero = () => {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', text: '' });
 
-  // Computed Values
+  // Derived
+  const isMobile = dimensions.width < 768;
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Utility Functions
+  // Toast
   const showToast = useCallback((type, text, ms = 1800) => {
     setToast({ visible: true, type, text });
     if (ms > 0) {
@@ -31,7 +32,7 @@ const Hero = () => {
     }
   }, []);
 
-  // Event Handlers
+  // Handlers
   const handleLocationClick = useCallback((location) => {
     setSelectedLocation(location);
     setIsModalOpen(true);
@@ -40,26 +41,18 @@ const Hero = () => {
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, '', nextHash);
     }
-
     showToast('success', `Opened ${location.name}`);
   }, [showToast]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setTimeout(() => setSelectedLocation(null), 250);
-
-    window.history.replaceState(
-      null,
-      '',
-      window.location.pathname + window.location.search
-    );
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);
 
   const handleSelectFromPalette = useCallback((name) => {
     const loc = locations.find(l => l.name === name);
-    if (!loc) {
-      return showToast('danger', `Location "${name}" not found`);
-    }
+    if (!loc) return showToast('danger', `Location "${name}" not found`);
     handleLocationClick(loc);
   }, [handleLocationClick, showToast]);
 
@@ -76,10 +69,7 @@ const Hero = () => {
 
   const shareCurrent = useCallback(async () => {
     try {
-      if (!selectedLocation) {
-        return showToast('danger', 'No location selected');
-      }
-
+      if (!selectedLocation) return showToast('danger', 'No location selected');
       const url = `${window.location.origin}${window.location.pathname}#loc=${encodeURIComponent(selectedLocation.name)}`;
       await navigator.clipboard.writeText(url);
       showToast('success', 'Link copied!');
@@ -89,105 +79,67 @@ const Hero = () => {
   }, [selectedLocation, showToast]);
 
   const quickActions = [
-    {
-      title: 'Random location',
-      desc: 'Jump anywhere',
-      icon: <Shuffle className="w-4 h-4" />,
-      onRun: randomLocation
-    },
-    {
-      title: selectedLocation ? `Share ${selectedLocation.name}` : 'Share current',
-      desc: 'Copy deep-link',
-      icon: <LinkIcon className="w-4 h-4" />,
-      onRun: shareCurrent
-    },
-    {
-      title: 'Clear selection',
-      desc: 'Close details',
-      icon: <XCircle className="w-4 h-4" />,
-      onRun: clearSelection
-    },
+    { title: 'Random location', desc: 'Jump anywhere', icon: <Shuffle className="w-4 h-4" />, onRun: randomLocation },
+    { title: selectedLocation ? `Share ${selectedLocation.name}` : 'Share current', desc: 'Copy deep-link', icon: <LinkIcon className="w-4 h-4" />, onRun: shareCurrent },
+    { title: 'Clear selection', desc: 'Close details', icon: <XCircle className="w-4 h-4" />, onRun: clearSelection },
   ];
 
-  // Window Resize Handler with RAF optimization
+  // Resize (RAF throttled)
   useEffect(() => {
     let raf = null;
-
     const handleResize = () => {
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        setDimensions({
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
+        setDimensions({ width: window.innerWidth, height: window.innerHeight });
       });
     };
-
     handleResize();
     window.addEventListener('resize', handleResize);
-
     return () => {
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  // Initialize Stars Data and Loading State
+  // Stars + loading
   useEffect(() => {
-    const starCount = prefersReducedMotion ? 800 : 2400;
+    // lighter on mobile and/or reduced motion
+    const base = prefersReducedMotion ? 600 : 2200;
+    const starCount = isMobile ? Math.floor(base * 0.55) : base;
     setStarsData(generateStarsData(starCount));
 
-    const loadingDelay = prefersReducedMotion ? 400 : 900;
+    const loadingDelay = prefersReducedMotion ? 350 : (isMobile ? 650 : 900);
     const timer = setTimeout(() => setIsLoading(false), loadingDelay);
-
     return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, isMobile]);
 
-  // Deep-link Support: Parse URL hash for location
+  // Deep-link
   useEffect(() => {
     const openFromHash = () => {
       const match = window.location.hash.match(/loc=([^&]+)/i);
       if (!match) return;
-
       const name = decodeURIComponent(match[1]).trim().toLowerCase();
       const loc = locations.find(l => l.name.toLowerCase() === name);
-
-      if (loc) {
-        setSelectedLocation(loc);
-        setIsModalOpen(true);
-      }
+      if (loc) { setSelectedLocation(loc); setIsModalOpen(true); }
     };
-
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
-
     return () => window.removeEventListener('hashchange', openFromHash);
   }, []);
 
-  // Global Keyboard Shortcuts
+  // Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isK = e.key.toLowerCase() === 'k';
       const cmdOrCtrl = e.metaKey || e.ctrlKey;
-
-      if (cmdOrCtrl && isK) {
-        e.preventDefault();
-        setPaletteOpen(current => !current);
-      }
-
-      if (e.key === 'Escape') {
-        setPaletteOpen(false);
-        if (isModalOpen) {
-          handleCloseModal();
-        }
-      }
+      if (cmdOrCtrl && isK) { e.preventDefault(); setPaletteOpen(v => !v); }
+      if (e.key === 'Escape') { setPaletteOpen(false); if (isModalOpen) handleCloseModal(); }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen, handleCloseModal]);
 
-  // Loading State
+  // Loading screen
   if (isLoading || dimensions.width === 0 || dimensions.height === 0) {
     return (
       <section
@@ -215,60 +167,52 @@ const Hero = () => {
 
   return (
     <>
-      <div>
-        <Navbar />
-      </div>
+      <Navbar />
 
-      <section className="fixed inset-0 min-w-screen min-h-screen flex justify-center items-center bg-[#0c0f1b] overflow-hidden">
-
+      <section className="fixed inset-0 min-w-screen min-h-screen flex justify-center items-center bg-[#0c0f1b] overflow-hidden pb-safe">
         <GlobeComponent
           dimensions={dimensions}
           starsData={starsData}
           onLocationClick={handleLocationClick}
-          // satellitePath="/nasa-eos-am-1terra-satellite/source/nasa_eos_am-1terra_satellite.glb"
-          // albedoPath="/nasa-eos-am-1terra-satellite/textures/gltf_embedded_2.png"
-          // emissivePath="/nasa-eos-am-1terra-satellite/textures/gltf_embedded_0.png"
-          // satelliteScaleRatio={0.06}
-          orbitalPeriodMs={14000}
+          orbitalPeriodMs={isMobile ? 16000 : 14000}
           orbitInclinationDeg={35}
-          // orbitRAANDeg={20}
-          orbitAltitudeRatio={2.4}
+          orbitAltitudeRatio={isMobile ? 2.6 : 2.4}
         />
 
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 text-center">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-200 to-teal-200 drop-shadow">
+        {/* Title */}
+        <div className="absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-20 text-center px-3">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-200 to-teal-200 drop-shadow">
             Terra • Global Story & Data Explorer
           </h1>
-          <p className="mt-2 text-slate-300/90 text-sm">
+          <p className="mt-2 text-slate-300/90 text-xs sm:text-sm">
             Explore climate stories & urban heat across the world.
           </p>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 text-center">
-          <div className="bg-black/40 backdrop-blur-sm rounded-full px-6 py-3 border border-slate-600 inline-flex items-center gap-3">
-            <span className="text-slate-300 text-sm">
-              🌍 Click locations or labels • 🖱️ Drag to rotate • 📌 Scroll to zoom
-            </span>
-            <span className="hidden sm:flex items-center gap-1 text-[11px] text-white/90 bg-white/10 px-2 py-1 rounded-md">
-              <Command className="w-3.5 h-3.5" /> K
-              <span className="opacity-80">Open palette</span>
+        {/* Bottom hint */}
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 text-center px-3">
+          <div className="bg-black/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-2.5 sm:py-3 border border-slate-600 inline-flex items-center gap-2 sm:gap-3">
+            <span className="text-slate-300 text-xs sm:text-sm">
+              🌍 Tap locations • Drag to rotate • Pinch/scroll to zoom
             </span>
           </div>
         </div>
 
-        <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-          <button
+        {/* Top right actions */}
+        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 flex items-center gap-2">
+          {/* Uncomment if you want the palette button visible */}
+          {/* <button
             onClick={() => setPaletteOpen(true)}
-            className="text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-3 py-2 text-sm flex items-center gap-2 transition-colors duration-200"
+            className="text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-3 py-2 text-xs sm:text-sm flex items-center gap-2 transition-colors duration-200"
             title="Open command palette (⌘K / Ctrl+K)"
           >
             <Command className="w-4 h-4" /> Palette
-          </button>
+          </button> */}
 
           {selectedLocation && (
             <button
               onClick={shareCurrent}
-              className="text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-3 py-2 text-sm flex items-center gap-2 transition-colors duration-200"
+              className="text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-3 py-2 text-xs sm:text-sm flex items-center gap-2 transition-colors duration-200"
               title={`Share ${selectedLocation.name}`}
             >
               <LinkIcon className="w-4 h-4" /> Share
@@ -277,13 +221,13 @@ const Hero = () => {
         </div>
       </section>
 
-      <CommandPalette
+      {/* <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         items={locations.map(l => l.name)}
         onSelect={handleSelectFromPalette}
         quickActions={quickActions}
-      />
+      /> */}
 
       {toast.visible && (
         <Alert

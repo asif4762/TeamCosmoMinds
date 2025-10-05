@@ -204,7 +204,7 @@ const Navbar = () => {
         <div className="px-6 py-5">
           <div className="mb-4 flex items-center justify-between">
             <span className="text-white/90 font-semibold">Menu</span>
-            <button
+            {/* <button
               onClick={() => {
                 openPalette();
                 closeMenu();
@@ -212,7 +212,7 @@ const Navbar = () => {
               className="text-xs text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 rounded-md"
             >
               Open Palette ⌘K
-            </button>
+            </button> */}
           </div>
           <NavItems onClick={closeMenu} activeId={activeId} />
           <div className="mt-6 flex items-center gap-3">
