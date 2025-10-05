@@ -245,7 +245,6 @@ export default function About() {
     <h3 className="text-white font-semibold text-lg mt-4">AI-Powered Features</h3>
     <ul className="list-disc pl-6 space-y-1">
       <li><strong>Q&A Chatbot:</strong> Users can ask climate and environment-related questions and receive instant answers using AI trained on Terra data and related resources.</li>
-      <li><strong>Research Paper & PDF Analysis:</strong> Users can upload research papers or PDF documents, and the AI extracts key information and generates visual summaries integrated into the platform.</li>
     </ul>
 
     <h3 className="text-white font-semibold text-lg mt-4">Main Pages</h3>
@@ -292,7 +291,7 @@ export default function About() {
 
             {/* why this? */}
             {[
-              { name: "ASIF ZAMAN", role: "Machine Learning Engineer", img: "https://i.ibb.co.com/DHmLW7K0/Whats-App-Image-2025-09-23-at-10-30-29.jpg" },
+              { name: "ASIF ZAMAN", role: "AI/ML Engineer", img: "https://i.ibb.co.com/DHmLW7K0/Whats-App-Image-2025-09-23-at-10-30-29.jpg" },
               { name: "AFRIDI AKBAR IFTY", role: "Full-Stack Developer", img: "https://i.ibb.co.com/ynHZtbpw/Whats-App-Image-2025-09-23-at-10-30-29-1.jpg" },
               { name: "ROBIUL HASAN", role: "Project Storyteller", img: "https://i.ibb.co.com/xkzbkTK/Whats-App-Image-2025-09-23-at-10-30-29-2.jpg" },
               { name: "MEHRAB-AL-HASAN", role: "Video Editor", img: "https://i.ibb.co.com/1GsMC4wL/Whats-App-Image-2025-09-23-at-10-32-05.jpg" },
